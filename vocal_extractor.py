@@ -8,6 +8,18 @@ OUTPUT_FOLDER = "./output/"
 FILTERED_PROGRAM_NUM = list(range(8, 16)) + list(range(112, 128))
 FILTERED_CHANNEL = 9
 UNIQUE_NOTE_THRESHOLD = 3
+AVG_NOTE_TIME_LOWER = 50
+AVG_NOTE_TIME_UPPER = 1000
+VALID_CNT = [0]
+
+
+def average_note_time(track):
+    note_cnt, time_sum = 0, 0
+    for curr_note in track:
+        if curr_note.type == "note_on" and curr_note.velocity > 0:
+            note_cnt += 1
+            time_sum += curr_note.time
+    return time_sum/note_cnt
 
 
 def isValid(track): 
@@ -19,6 +31,7 @@ def isValid(track):
         3. filter bass/drum program number
         4. filter channel=9
         5. filter unique note cnt <= threshold
+        6. average_note_time is under threshold
     """
     unique_note = set()
     for idx in range(len(track)-1):
@@ -40,6 +53,11 @@ def isValid(track):
     
     # filter by unique note cnt
     if len(unique_note) <= UNIQUE_NOTE_THRESHOLD:
+        return False
+    
+    # filter by average note time of the track
+    avg_note_time = average_note_time(track)
+    if avg_note_time < AVG_NOTE_TIME_LOWER or avg_note_time > AVG_NOTE_TIME_UPPER:
         return False
     
     return True
@@ -79,6 +97,7 @@ def extractVocalTracks(path, file_name):
             new_midi.tracks.append(old_midi.tracks[0])
             new_midi.tracks.append(old_midi.tracks[track_idx])
             print("Saving track %d to new file: " % track_idx, new_file_path)
+            VALID_CNT[0] += 1
             new_midi.save(new_file_path)
 
 
@@ -101,3 +120,4 @@ if __name__ == "__main__":
     if not os.path.exists(OUTPUT_FOLDER):
         os.makedirs(OUTPUT_FOLDER)
     process()
+    print("Process finished, got {} valid tracks!".format(VALID_CNT[0]))
